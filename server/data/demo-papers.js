@@ -1,0 +1,51 @@
+export const demoPapers = [
+  {
+    id: "agent-memory-survey",
+    externalSource: "demo",
+    externalId: "2402.00000",
+    doi: "10.48550/arXiv.2402.00000",
+    title: "A Survey on Memory Mechanisms for Language Agents",
+    abstract:
+      "This survey organizes agent memory into working, episodic, semantic and procedural layers, and compares retrieval strategies across recent systems.",
+    authors: ["Chen, L.", "Park, J.", "Zhang, R."],
+    year: 2024,
+    venue: "arXiv",
+    url: "https://arxiv.org/abs/2402.00000",
+    citationCount: 184,
+    openAccess: true,
+    tags: ["agent", "memory", "llm"],
+  },
+  {
+    id: "retrieval-augmented-agents",
+    externalSource: "demo",
+    externalId: "neurips-2025-rag-agents",
+    doi: "10.0000/demo.rag-agents",
+    title: "Retrieval-Augmented Language Agents for Long-Horizon Tasks",
+    abstract:
+      "The paper studies how retrieval quality and memory summarization affect planning performance in long-horizon language agent tasks.",
+    authors: ["Sato, K.", "Li, M."],
+    year: 2025,
+    venue: "NeurIPS",
+    url: "https://example.com/retrieval-augmented-agents",
+    citationCount: 67,
+    openAccess: false,
+    tags: ["agent", "rag", "planning"],
+  },
+  {
+    id: "rag-evaluation",
+    externalSource: "demo",
+    externalId: "acl-2025-rag-eval",
+    doi: "10.0000/demo.rag-eval",
+    title:
+      "Evaluating Retrieval-Augmented Generation for Scientific Question Answering",
+    abstract:
+      "A benchmark and evaluation protocol for retrieval quality, answer faithfulness and citation precision in scientific QA systems.",
+    authors: ["Miller, A.", "Wang, H."],
+    year: 2025,
+    venue: "ACL Findings",
+    url: "https://example.com/rag-evaluation",
+    citationCount: 42,
+    openAccess: true,
+    tags: ["rag", "evaluation", "citation"],
+  },
+];

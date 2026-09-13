@@ -1,8 +1,17 @@
-import { Bot, CornerDownLeft, Paperclip, Square, Sparkles } from "lucide-react";
+import {
+  Bot,
+  Copy,
+  CornerDownLeft,
+  Paperclip,
+  RotateCcw,
+  Square,
+  Sparkles,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { confirmAgentAction, streamAgentChat } from "../api/agent.js";
 import { ActionConfirmCard, ToolCallCard } from "../components/AgentToolCard.jsx";
+import { useToast } from "../components/Toast.jsx";
 import { PageHeader, Pill, Surface } from "../components/ui.jsx";
 import { getSelectedPapers } from "../lib/selectedPapers.js";
 
@@ -25,6 +34,7 @@ function toPlainText(value) {
 }
 
 export default function AgentPage() {
+  const { showToast } = useToast();
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState(initialMessages);
   const [generating, setGenerating] = useState(false);
@@ -46,8 +56,11 @@ export default function AgentPage() {
     );
   }
 
-  async function sendMessage() {
-    const message = draft.trim();
+  async function sendMessage({
+    text = draft,
+    appendUserMessage = true,
+  } = {}) {
+    const message = text.trim();
     if (!message || generating) return;
 
     const history = messages.map((item) => ({
@@ -56,10 +69,12 @@ export default function AgentPage() {
     }));
     const assistantId = `assistant-${Date.now()}`;
 
-    setDraft("");
+    if (appendUserMessage) setDraft("");
     setMessages((current) => [
       ...current,
-      { id: `user-${Date.now()}`, role: "user", content: message },
+      ...(appendUserMessage
+        ? [{ id: `user-${Date.now()}`, role: "user", content: message }]
+        : []),
       {
         id: assistantId,
         role: "assistant",
@@ -177,6 +192,30 @@ export default function AgentPage() {
     sendMessage();
   }
 
+  async function copyMessage(content) {
+    await navigator.clipboard.writeText(toPlainText(content));
+    showToast("回答已复制");
+  }
+
+  function regenerateAnswer(messageId) {
+    const messageIndex = messages.findIndex((item) => item.id === messageId);
+    const previousUserMessage = messages
+      .slice(0, messageIndex)
+      .reverse()
+      .find((item) => item.role === "user");
+
+    if (previousUserMessage) {
+      sendMessage({
+        text: previousUserMessage.content,
+        appendUserMessage: false,
+      });
+    }
+  }
+
+  const lastAssistantId = [...messages]
+    .reverse()
+    .find((message) => message.role === "assistant")?.id;
+
   async function handleConfirmAction(messageId, action) {
     setBusyActionId(action.id);
 
@@ -252,8 +291,33 @@ export default function AgentPage() {
                   }
                 >
                   <p className="whitespace-pre-wrap">
-                    {toPlainText(message.content) || "..."}
+                    {toPlainText(message.content) || (generating ? "" : "...")}
+                    {generating && message.id === lastAssistantId ? (
+                      <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-teal-700 align-[-2px]" />
+                    ) : null}
                   </p>
+                  {message.role === "assistant" && message.content ? (
+                    <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-200 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => copyMessage(message.content)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900"
+                      >
+                        <Copy size={13} aria-hidden="true" />
+                        复制
+                      </button>
+                      {!generating ? (
+                        <button
+                          type="button"
+                          onClick={() => regenerateAnswer(message.id)}
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900"
+                        >
+                          <RotateCcw size={13} aria-hidden="true" />
+                          重新回答
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
                   {message.tools?.map((tool) => (
                     <ToolCallCard key={tool.id} tool={tool} />
                   ))}

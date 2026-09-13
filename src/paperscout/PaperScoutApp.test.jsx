@@ -26,7 +26,7 @@ describe("PaperScout foundation", () => {
   it.each([
     ["/discover", /检索候选论文/],
     ["/papers/demo-paper", /A Survey on Memory Mechanisms/],
-    ["/collections/demo", /Agent Memory Literature/],
+    ["/collections/demo", /文献集合/],
     ["/agent", /对文献库进行提问/],
   ])("renders %s", (route, heading) => {
     renderApp(route);

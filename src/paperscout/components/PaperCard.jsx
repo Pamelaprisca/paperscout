@@ -1,5 +1,5 @@
 import { BookOpen, BookmarkCheck, ExternalLink, Quote, Save } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Link } from "react-router";
 
 import { cn } from "../lib/cn.js";
@@ -7,17 +7,26 @@ import {
   isPaperSelected,
   toggleSelectedPaper,
 } from "../lib/selectedPapers.js";
+import { useToast } from "./Toast.jsx";
 import { Pill, Surface } from "./ui.jsx";
 
-export function PaperCard({ paper, compact = false }) {
+function PaperCardComponent({
+  paper,
+  compact = false,
+  onSelectionChange,
+}) {
+  const { showToast } = useToast();
   const [selected, setSelected] = useState(() => isPaperSelected(paper.id));
 
   function handleSave() {
-    setSelected(toggleSelectedPaper(paper));
+    const nextSelected = toggleSelectedPaper(paper);
+    setSelected(nextSelected);
+    onSelectionChange?.(paper, nextSelected);
+    showToast(nextSelected ? "论文已加入文献集合" : "论文已从集合移除");
   }
 
   return (
-    <Surface className={cn("p-4", compact && "shadow-none")}>
+    <Surface className={cn("p-4", compact && "h-full overflow-hidden shadow-none")}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -74,3 +83,5 @@ export function PaperCard({ paper, compact = false }) {
     </Surface>
   );
 }
+
+export const PaperCard = memo(PaperCardComponent);

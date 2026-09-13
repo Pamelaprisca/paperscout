@@ -36,3 +36,10 @@ export function toggleSelectedPaper(paper) {
   write(next);
   return !exists;
 }
+
+export function removeSelectedPapers(paperIds) {
+  const ids = new Set(paperIds);
+  const next = read().filter((paper) => !ids.has(paper.id));
+  write(next);
+  return next;
+}

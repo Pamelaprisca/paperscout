@@ -1,5 +1,6 @@
 import { Filter, Search, SlidersHorizontal } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 
 import { searchPapers } from "../api/papers.js";
 import { PaperCard } from "../components/PaperCard.jsx";
@@ -42,10 +43,38 @@ const demoResults = [
 ];
 
 export default function DiscoverPage() {
-  const [query, setQuery] = useState("LLM agent memory");
+  const [searchParams] = useSearchParams();
+  const [query, setQuery] = useState(
+    () => searchParams.get("q")?.trim() || "LLM agent memory",
+  );
   const [results, setResults] = useState(demoResults);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const nextQuery = searchParams.get("q")?.trim();
+    if (!nextQuery) return undefined;
+
+    let cancelled = false;
+    setQuery(nextQuery);
+    setLoading(true);
+    setError("");
+
+    searchPapers({ query: nextQuery })
+      .then((data) => {
+        if (!cancelled) setResults(data.papers ?? []);
+      })
+      .catch((searchError) => {
+        if (!cancelled) setError(searchError.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
 
   async function handleSearch(event) {
     event.preventDefault();

@@ -1,10 +1,10 @@
-import { Filter, Search, SlidersHorizontal } from "lucide-react";
+import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 
 import { searchPapers } from "../api/papers.js";
 import { PaperCard } from "../components/PaperCard.jsx";
-import { PageHeader, Pill, Surface } from "../components/ui.jsx";
+import { PageHeader, Surface } from "../components/ui.jsx";
 
 const demoResults = [
   {
@@ -128,18 +128,6 @@ export default function DiscoverPage() {
           </button>
         </form>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Pill tone="teal">LLM agent</Pill>
-          <Pill>memory</Pill>
-          <Pill>retrieval</Pill>
-          <button
-            type="button"
-            className="ml-auto inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-slate-950"
-          >
-            <SlidersHorizontal size={14} aria-hidden="true" />
-            更多筛选
-          </button>
-        </div>
       </Surface>
 
       {error ? (
@@ -155,10 +143,6 @@ export default function DiscoverPage() {
         <p className="text-sm font-semibold text-slate-700">
           找到 <span className="text-slate-950">{results.length}</span> 篇相关论文
         </p>
-        <div className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600">
-          <Filter size={14} aria-hidden="true" />
-          按相关度排序
-        </div>
       </div>
 
       <section className="space-y-3">

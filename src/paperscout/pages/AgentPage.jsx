@@ -1,5 +1,5 @@
 import { Bot, CornerDownLeft, Paperclip, Square, Sparkles } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { confirmAgentAction, streamAgentChat } from "../api/agent.js";
 import { ActionConfirmCard, ToolCallCard } from "../components/AgentToolCard.jsx";
@@ -23,6 +23,11 @@ export default function AgentPage() {
   const [busyActionId, setBusyActionId] = useState("");
   const [selectedPapers] = useState(() => getSelectedPapers());
   const abortRef = useRef(null);
+  const endRef = useRef(null);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView?.({ block: "end" });
+  }, [messages, status]);
 
   function updateMessage(messageId, updater) {
     setMessages((current) =>
@@ -202,14 +207,16 @@ export default function AgentPage() {
   }
 
   return (
-    <div className="space-y-7">
-      <PageHeader
-        eyebrow="Agent"
-        title="对文献库进行提问"
-        description={`当前选中 ${selectedPapers.length} 篇论文。Agent 会在这些论文的摘要片段中检索证据，并返回引用来源。`}
-      />
+    <div className="flex h-[calc(100vh-7rem)] min-h-[560px] flex-col gap-5 overflow-hidden">
+      <div className="shrink-0">
+        <PageHeader
+          eyebrow="Agent"
+          title="对文献库进行提问"
+          description={`当前选中 ${selectedPapers.length} 篇论文。Agent 会在这些论文的摘要片段中检索证据，并返回引用来源。`}
+        />
+      </div>
 
-      <div className="grid min-h-[620px] gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="grid min-h-0 flex-1 gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-200/40">
           <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-3">
             <span className="grid size-9 place-items-center rounded-md bg-slate-950 text-white">
@@ -217,12 +224,12 @@ export default function AgentPage() {
             </span>
             <div>
               <p className="text-sm font-bold text-slate-950">Research Agent</p>
-              <p className="text-xs text-slate-500">Foundation mode</p>
+              <p className="text-xs text-slate-500">Streaming plain text</p>
             </div>
             <Pill tone="teal">Agent preview</Pill>
           </div>
 
-          <div className="flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
             {messages.map((message, index) => (
               <div
                 key={message.id ?? `${message.role}-${index}`}
@@ -264,6 +271,7 @@ export default function AgentPage() {
                 </div>
               </div>
             ))}
+            <div ref={endRef} />
           </div>
 
           <form
@@ -317,7 +325,7 @@ export default function AgentPage() {
           </form>
         </div>
 
-        <aside className="space-y-4">
+        <aside className="min-h-0 space-y-4 overflow-y-auto pr-1">
           <Surface className="p-4">
             <h2 className="text-sm font-black text-slate-950">当前论文上下文</h2>
             {selectedPapers.length ? (

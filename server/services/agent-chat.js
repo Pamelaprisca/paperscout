@@ -134,6 +134,8 @@ async function streamModel({
     "Use the selected paper metadata as context.",
     "Never pretend a paper contains evidence that is not in the provided context.",
     "Return concise, practical answers for literature review work.",
+    "Return plain text only. Do not use Markdown syntax, headings, bold markers, tables, code fences, or backticks.",
+    "For lists, use plain numbered lines such as 1. and 2. Keep the formatting stable across answers.",
   ].join(" ");
 
   const context = selectedPapers.length

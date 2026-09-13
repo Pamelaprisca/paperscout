@@ -15,6 +15,15 @@ const initialMessages = [
   },
 ];
 
+function toPlainText(value) {
+  return String(value ?? "")
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^\s*[-*]\s+/gm, "• ");
+}
+
 export default function AgentPage() {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState(initialMessages);
@@ -242,7 +251,9 @@ export default function AgentPage() {
                       : "max-w-2xl rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700"
                   }
                 >
-                  <p className="whitespace-pre-wrap">{message.content || "..."}</p>
+                  <p className="whitespace-pre-wrap">
+                    {toPlainText(message.content) || "..."}
+                  </p>
                   {message.tools?.map((tool) => (
                     <ToolCallCard key={tool.id} tool={tool} />
                   ))}

@@ -14,6 +14,11 @@ const API_KEY =
   process.env.AI_API_KEY ||
   process.env.DEEPSEEK_API_KEY ||
   process.env.OPENAI_API_KEY;
+const configuredMaxTokens = Number(process.env.AI_MAX_TOKENS);
+const MAX_TOKENS =
+  Number.isInteger(configuredMaxTokens) && configuredMaxTokens > 0
+    ? configuredMaxTokens
+    : 1200;
 
 function writeEvent(response, event) {
   response.write(`${JSON.stringify(event)}\n`);
@@ -153,6 +158,7 @@ async function streamModel({
       model: PROVIDER_MODEL,
       stream: true,
       temperature: 0.2,
+      max_tokens: MAX_TOKENS,
       messages: [
         { role: "system", content: systemPrompt },
         {

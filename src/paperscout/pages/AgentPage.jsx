@@ -13,6 +13,7 @@ import { confirmAgentAction, streamAgentChat } from "../api/agent.js";
 import { ActionConfirmCard, ToolCallCard } from "../components/AgentToolCard.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { PageHeader, Pill, Surface } from "../components/ui.jsx";
+import { buildAgentHistory } from "../lib/agentHistory.js";
 import { getSelectedPapers } from "../lib/selectedPapers.js";
 
 const initialMessages = [
@@ -42,6 +43,7 @@ export default function AgentPage() {
   const [busyActionId, setBusyActionId] = useState("");
   const [selectedPapers] = useState(() => getSelectedPapers());
   const abortRef = useRef(null);
+  const activeAssistantIdRef = useRef("");
   const endRef = useRef(null);
 
   useEffect(() => {
@@ -63,13 +65,11 @@ export default function AgentPage() {
     const message = text.trim();
     if (!message || generating) return;
 
-    const history = messages.map((item) => ({
-      role: item.role,
-      content: item.content,
-    }));
+    const history = buildAgentHistory(messages);
     const assistantId = `assistant-${Date.now()}`;
 
     if (appendUserMessage) setDraft("");
+    activeAssistantIdRef.current = assistantId;
     setMessages((current) => [
       ...current,
       ...(appendUserMessage
@@ -97,6 +97,8 @@ export default function AgentPage() {
         selectedPapers,
         signal: controller.signal,
         onEvent(event) {
+          if (controller.signal.aborted) return;
+
           if (event.type === "status") {
             setStatus(event.text);
           }
@@ -177,12 +179,25 @@ export default function AgentPage() {
     } finally {
       setGenerating(false);
       setStatus("");
-      abortRef.current = null;
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
+      if (activeAssistantIdRef.current === assistantId) {
+        activeAssistantIdRef.current = "";
+      }
     }
   }
 
   function stopGeneration() {
+    const assistantId = activeAssistantIdRef.current;
     abortRef.current?.abort();
+    if (assistantId) {
+      updateMessage(assistantId, (item) => ({
+        ...item,
+        status: "cancelled",
+      }));
+    }
+    activeAssistantIdRef.current = "";
     setGenerating(false);
     setStatus("");
   }
@@ -287,11 +302,18 @@ export default function AgentPage() {
                   className={
                     message.role === "user"
                       ? "max-w-2xl rounded-lg bg-slate-950 px-4 py-3 text-sm leading-6 text-white"
+                      : message.status === "cancelled"
+                        ? "max-w-2xl rounded-lg border border-slate-200 bg-slate-100 px-4 py-3 text-sm leading-6 text-slate-500"
                       : "max-w-2xl rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700"
                   }
                 >
                   <p className="whitespace-pre-wrap">
-                    {toPlainText(message.content) || (generating ? "" : "...")}
+                    {toPlainText(message.content) ||
+                      (message.status === "cancelled"
+                        ? "本次回答已取消"
+                        : generating
+                          ? ""
+                          : "...")}
                     {generating && message.id === lastAssistantId ? (
                       <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-teal-700 align-[-2px]" />
                     ) : null}

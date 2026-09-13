@@ -120,7 +120,14 @@ async function streamMock({ response, message, selectedPapers, signal }) {
   }
 }
 
-async function streamModel({ response, message, selectedPapers, history, signal }) {
+async function streamModel({
+  response,
+  message,
+  selectedPapers,
+  history,
+  signal,
+  toolContext = "",
+}) {
   const systemPrompt = [
     "You are PaperScout, an academic literature research assistant.",
     "Answer in the same language as the user.",
@@ -132,6 +139,7 @@ async function streamModel({ response, message, selectedPapers, history, signal 
   const context = selectedPapers.length
     ? JSON.stringify(selectedPapers.slice(0, 8), null, 2)
     : "No paper is selected.";
+  const toolObservation = toolContext || "No tool was called for this request.";
 
   const providerResponse = await fetch(PROVIDER_URL, {
     method: "POST",
@@ -147,7 +155,7 @@ async function streamModel({ response, message, selectedPapers, history, signal 
         { role: "system", content: systemPrompt },
         {
           role: "system",
-          content: `Selected papers:\n${context}`,
+          content: `Selected papers:\n${context}\n\nTool observations:\n${toolObservation}`,
         },
         ...history
           .filter((item) => item.role === "user" || item.role === "assistant")
@@ -230,6 +238,7 @@ async function streamToolAgent({
     return {
       handled: true,
       citations: [paper],
+      skipModel: true,
     };
   }
 
@@ -253,15 +262,30 @@ async function streamToolAgent({
       )
       .join("\n");
 
-    await streamAssistantText(
-      response,
-      `已完成论文元数据对齐，当前比较集合包括：\n${lines}\n下一步接入真实检索工具后，会继续比较方法、数据集和结论。\n`,
-      signal,
-    );
+    const toolContext = selectedPapers
+      .slice(0, 8)
+      .map((paper) =>
+        [
+          `Title: ${paper.title}`,
+          `Year: ${paper.year}`,
+          `Venue: ${paper.venue}`,
+          `Abstract: ${paper.abstract}`,
+        ].join("\n"),
+      )
+      .join("\n\n");
+
+    if (!API_KEY) {
+      await streamAssistantText(
+        response,
+        `已完成论文元数据对齐，当前比较集合包括：\n${lines}\n下一步接入真实检索工具后，会继续比较方法、数据集和结论。\n`,
+        signal,
+      );
+    }
 
     return {
       handled: true,
       citations: selectedPapers.slice(0, 4),
+      toolContext,
     };
   }
 
@@ -279,27 +303,41 @@ async function streamToolAgent({
       result.papers.length,
     );
 
-    if (result.papers.length === 0) {
-      await streamAssistantText(response, "没有找到匹配论文，请换一个关键词。", signal);
-    } else {
-      const lines = result.papers
-        .slice(0, 5)
-        .map(
-          (paper, index) =>
-            `${index + 1}. ${paper.title}（${paper.year}，${paper.venue}）`,
-        )
-        .join("\n");
+    if (!API_KEY) {
+      if (result.papers.length === 0) {
+        await streamAssistantText(response, "没有找到匹配论文，请换一个关键词。", signal);
+      } else {
+        const lines = result.papers
+          .slice(0, 5)
+          .map(
+            (paper, index) =>
+              `${index + 1}. ${paper.title}（${paper.year}，${paper.venue}）`,
+          )
+          .join("\n");
 
-      await streamAssistantText(
-        response,
-        `找到以下候选论文：\n${lines}\n你可以继续让我比较这些论文，或者指定某一篇查看详情。`,
-        signal,
-      );
+        await streamAssistantText(
+          response,
+          `找到以下候选论文：\n${lines}\n你可以继续让我比较这些论文，或者指定某一篇查看详情。`,
+          signal,
+        );
+      }
     }
 
     return {
       handled: true,
       citations: result.papers.slice(0, 5),
+      toolContext: JSON.stringify(
+        result.papers.slice(0, 8).map((paper) => ({
+          title: paper.title,
+          abstract: paper.abstract,
+          year: paper.year,
+          venue: paper.venue,
+          doi: paper.doi,
+          citationCount: paper.citationCount,
+        })),
+        null,
+        2,
+      ),
     };
   }
 
@@ -323,26 +361,28 @@ async function streamToolAgent({
       chunks.length,
     );
 
-    if (chunks.length === 0) {
-      await streamAssistantText(
-        response,
-        "当前选中论文中没有找到与该问题直接相关的摘要片段。可以换一个关键词，或先扩大论文集合。",
-        signal,
-      );
-    } else {
-      const evidenceText = chunks
-        .slice(0, 3)
-        .map(
-          (chunk, index) =>
-            `${index + 1}. 《${chunk.paper.title}》：${chunk.content.slice(0, 180)}`,
-        )
-        .join("\n\n");
+    if (!API_KEY) {
+      if (chunks.length === 0) {
+        await streamAssistantText(
+          response,
+          "当前选中论文中没有找到与该问题直接相关的摘要片段。可以换一个关键词，或先扩大论文集合。",
+          signal,
+        );
+      } else {
+        const evidenceText = chunks
+          .slice(0, 3)
+          .map(
+            (chunk, index) =>
+              `${index + 1}. 《${chunk.paper.title}》：${chunk.content.slice(0, 180)}`,
+          )
+          .join("\n\n");
 
-      await streamAssistantText(
-        response,
-        `我检索到以下相关证据片段：\n\n${evidenceText}\n\n这些片段可以继续整理成引用证据或 Related Work 草稿。`,
-        signal,
-      );
+        await streamAssistantText(
+          response,
+          `我检索到以下相关证据片段：\n\n${evidenceText}\n\n这些片段可以继续整理成引用证据或 Related Work 草稿。`,
+          signal,
+        );
+      }
     }
 
     const citationMap = new Map();
@@ -351,6 +391,15 @@ async function streamToolAgent({
     return {
       handled: true,
       citations: [...citationMap.values()],
+      toolContext: JSON.stringify(
+        chunks.slice(0, 8).map((chunk) => ({
+          title: chunk.paper.title,
+          doi: chunk.paper.doi,
+          content: chunk.content,
+        })),
+        null,
+        2,
+      ),
     };
   }
 
@@ -386,13 +435,16 @@ export async function streamAgentChat({
       signal: abortController.signal,
     });
 
-    if (!toolResult && API_KEY) {
+    if (toolResult?.skipModel) {
+      // Action confirmation is rendered by the client before continuing.
+    } else if (API_KEY) {
       await streamModel({
         response,
         message,
         selectedPapers,
         history,
         signal: abortController.signal,
+        toolContext: toolResult?.toolContext ?? "",
       });
     } else if (!toolResult) {
       await streamMock({

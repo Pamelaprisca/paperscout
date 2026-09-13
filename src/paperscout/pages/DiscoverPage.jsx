@@ -5,6 +5,10 @@ import { useSearchParams } from "react-router";
 import { searchPapers } from "../api/papers.js";
 import { PaperCard } from "../components/PaperCard.jsx";
 import { PageHeader, Surface } from "../components/ui.jsx";
+import {
+  getSearchSession,
+  saveSearchSession,
+} from "../lib/searchSession.js";
 
 const demoResults = [
   {
@@ -44,10 +48,18 @@ const demoResults = [
 
 export default function DiscoverPage() {
   const [searchParams] = useSearchParams();
+  const savedSession = getSearchSession();
+  const urlQuery = searchParams.get("q")?.trim();
   const [query, setQuery] = useState(
-    () => searchParams.get("q")?.trim() || "LLM agent memory",
+    () => urlQuery || savedSession?.query || "LLM agent memory",
   );
-  const [results, setResults] = useState(demoResults);
+  const [results, setResults] = useState(
+    () =>
+      savedSession?.results?.length
+        ? savedSession.results
+        : demoResults,
+  );
+  const [source, setSource] = useState(savedSession?.source || "demo");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -62,7 +74,16 @@ export default function DiscoverPage() {
 
     searchPapers({ query: nextQuery })
       .then((data) => {
-        if (!cancelled) setResults(data.papers ?? []);
+        if (!cancelled) {
+          const nextResults = data.papers ?? [];
+          setResults(nextResults);
+          setSource(data.source ?? "unknown");
+          saveSearchSession({
+            query: nextQuery,
+            source: data.source ?? "unknown",
+            results: nextResults,
+          });
+        }
       })
       .catch((searchError) => {
         if (!cancelled) setError(searchError.message);
@@ -87,7 +108,14 @@ export default function DiscoverPage() {
 
     try {
       const data = await searchPapers({ query: nextQuery });
-      setResults(data.papers ?? []);
+      const nextResults = data.papers ?? [];
+      setResults(nextResults);
+      setSource(data.source ?? "unknown");
+      saveSearchSession({
+        query: nextQuery,
+        source: data.source ?? "unknown",
+        results: nextResults,
+      });
     } catch (searchError) {
       setError(searchError.message);
     } finally {
@@ -142,6 +170,11 @@ export default function DiscoverPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-semibold text-slate-700">
           找到 <span className="text-slate-950">{results.length}</span> 篇相关论文
+          {source !== "demo" ? (
+            <span className="ml-2 font-normal text-slate-500">
+              来源：{source}
+            </span>
+          ) : null}
         </p>
       </div>
 

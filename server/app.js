@@ -1,11 +1,15 @@
 import cors from "cors";
 import express from "express";
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
   getPaperById,
+  getPaperChunkById,
+  listEvidenceByPaperId,
+  saveEvidence,
   searchPaperChunks,
 } from "./db/database.js";
 import {
@@ -75,6 +79,94 @@ app.get("/api/papers/:paperId", (request, response) => {
   }
 
   return response.json(paper);
+});
+
+app.get("/api/papers/:paperId/evidence", (request, response) => {
+  const paper = getPaperById(request.params.paperId);
+
+  if (!paper) {
+    return response.status(404).json({ error: "Paper not found" });
+  }
+
+  const evidence = listEvidenceByPaperId(request.params.paperId);
+
+  return response.json({
+    paperId: request.params.paperId,
+    total: evidence.length,
+    evidence,
+  });
+});
+
+app.post("/api/evidence", (request, response) => {
+  const claim = String(request.body?.claim ?? "").trim();
+  const items = Array.isArray(request.body?.items) ? request.body.items : [];
+
+  if (!claim || items.length === 0) {
+    return response.status(400).json({
+      error: "Evidence claim and selected items are required",
+    });
+  }
+
+  if (items.length > 10) {
+    return response.status(400).json({
+      error: "Too many evidence items",
+    });
+  }
+
+  const seenChunkIds = new Set();
+  const evidence = [];
+
+  try {
+    for (const item of items) {
+      const paperId = String(item?.paperId ?? "").trim();
+      const chunkId = String(item?.chunkId ?? "").trim();
+
+      if (!paperId || !chunkId || seenChunkIds.has(chunkId)) continue;
+      seenChunkIds.add(chunkId);
+
+      const paper = getPaperById(paperId);
+      const chunk = getPaperChunkById(chunkId);
+
+      if (!paper) {
+        const error = new Error("Paper not found");
+        error.status = 404;
+        throw error;
+      }
+
+      if (!chunk || chunk.paperId !== paperId) {
+        const error = new Error("Chunk does not belong to paper");
+        error.status = 400;
+        throw error;
+      }
+
+      const saved = saveEvidence({
+        id: `evidence-${randomUUID()}`,
+        paperId,
+        claim,
+        quote: chunk.content,
+      });
+
+      evidence.push({
+        ...saved,
+        paper,
+      });
+    }
+
+    if (evidence.length === 0) {
+      return response.status(400).json({
+        error: "No valid evidence items",
+      });
+    }
+
+    return response.status(201).json({
+      total: evidence.length,
+      evidence,
+    });
+  } catch (error) {
+    return response.status(error.status || 500).json({
+      error: error.message || "Failed to save evidence",
+    });
+  }
 });
 
 app.post("/api/rag/search", async (request, response) => {

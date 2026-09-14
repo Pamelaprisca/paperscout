@@ -24,3 +24,10 @@ export async function getPaper(paperId) {
   const response = await fetch(`/api/papers/${encodeURIComponent(paperId)}`);
   return readJson(response);
 }
+
+export async function getPaperEvidence(paperId) {
+  const response = await fetch(
+    `/api/papers/${encodeURIComponent(paperId)}/evidence`,
+  );
+  return readJson(response);
+}

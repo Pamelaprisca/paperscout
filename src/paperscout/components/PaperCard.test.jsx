@@ -56,4 +56,25 @@ describe("PaperCard", () => {
       JSON.parse(window.localStorage.getItem("paperscout:selected-papers")),
     ).toHaveLength(0);
   });
+
+  it("encodes paper IDs in detail links", () => {
+    const doiPaper = {
+      ...paper,
+      id: "doi:10.1145/3748302",
+      title: "DOI Paper",
+    };
+
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <PaperCard paper={doiPaper} />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link", { name: "DOI Paper" })).toHaveAttribute(
+      "href",
+      "/papers/doi%3A10.1145%2F3748302",
+    );
+  });
 });

@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { confirmAgentAction, streamAgentChat } from "../api/agent.js";
 import { ActionConfirmCard, ToolCallCard } from "../components/AgentToolCard.jsx";
+import { EvidencePanel } from "../components/EvidencePanel.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { PageHeader, Pill, Surface } from "../components/ui.jsx";
 import { buildAgentHistory } from "../lib/agentHistory.js";
@@ -80,6 +81,8 @@ export default function AgentPage() {
         role: "assistant",
         content: "",
         citations: [],
+        evidence: [],
+        evidenceClaim: "",
         tools: [],
         actions: [],
       },
@@ -114,6 +117,14 @@ export default function AgentPage() {
             updateMessage(assistantId, (item) => ({
               ...item,
               citations: event.papers,
+            }));
+          }
+
+          if (event.type === "evidence") {
+            updateMessage(assistantId, (item) => ({
+              ...item,
+              evidence: event.items ?? [],
+              evidenceClaim: event.claim ?? "",
             }));
           }
 
@@ -279,7 +290,7 @@ export default function AgentPage() {
         />
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="grid min-h-0 flex-1 gap-5 xl:grid-cols-[minmax(0,1fr)_240px]">
         <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-200/40">
           <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-3">
             <span className="grid size-9 place-items-center rounded-md bg-slate-950 text-white">
@@ -301,10 +312,10 @@ export default function AgentPage() {
                 <div
                   className={
                     message.role === "user"
-                      ? "max-w-2xl rounded-lg bg-slate-950 px-4 py-3 text-sm leading-6 text-white"
+                      ? "max-w-3xl rounded-lg bg-slate-950 px-4 py-3 text-sm leading-6 text-white"
                       : message.status === "cancelled"
-                        ? "max-w-2xl rounded-lg border border-slate-200 bg-slate-100 px-4 py-3 text-sm leading-6 text-slate-500"
-                      : "max-w-2xl rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700"
+                        ? "max-w-3xl rounded-lg border border-slate-200 bg-slate-100 px-4 py-3 text-sm leading-6 text-slate-500"
+                      : "max-w-3xl rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700"
                   }
                 >
                   <p className="whitespace-pre-wrap">
@@ -339,6 +350,12 @@ export default function AgentPage() {
                         </button>
                       ) : null}
                     </div>
+                  ) : null}
+                  {message.evidence?.length ? (
+                    <EvidencePanel
+                      claim={message.evidenceClaim}
+                      items={message.evidence}
+                    />
                   ) : null}
                   {message.tools?.map((tool) => (
                     <ToolCallCard key={tool.id} tool={tool} />

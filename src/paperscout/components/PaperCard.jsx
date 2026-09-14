@@ -36,7 +36,7 @@ function PaperCardComponent({
           </div>
           <h2 className="text-base font-bold leading-6 text-slate-950">
             <Link
-              to={`/papers/${paper.id}`}
+              to={`/papers/${encodeURIComponent(paper.id)}`}
               className="decoration-teal-700 decoration-2 underline-offset-4 hover:underline"
             >
               {paper.title}

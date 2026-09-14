@@ -2,7 +2,10 @@ import { ArrowLeft, BookOpen, FileDown, Quote, Save, Sparkles } from "lucide-rea
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 
-import { getPaper } from "../api/papers.js";
+import {
+  getPaper,
+  getPaperEvidence,
+} from "../api/papers.js";
 import { ActionButton, PageHeader, Pill, Surface } from "../components/ui.jsx";
 
 const fallbackPaper = {
@@ -21,6 +24,7 @@ const fallbackPaper = {
 export default function PaperDetailPage() {
   const { paperId } = useParams();
   const [paper, setPaper] = useState(fallbackPaper);
+  const [evidence, setEvidence] = useState([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -28,8 +32,15 @@ export default function PaperDetailPage() {
 
     async function loadPaper() {
       try {
-        const data = await getPaper(paperId);
-        if (!cancelled) setPaper(data);
+        const [paperData, evidenceData] = await Promise.all([
+          getPaper(paperId),
+          getPaperEvidence(paperId),
+        ]);
+
+        if (!cancelled) {
+          setPaper(paperData);
+          setEvidence(evidenceData.evidence ?? []);
+        }
       } catch (loadError) {
         if (!cancelled) setError(loadError.message);
       }
@@ -87,18 +98,27 @@ export default function PaperDetailPage() {
           </Surface>
 
           <Surface className="p-5">
-            <h2 className="text-base font-black text-slate-950">可提取证据</h2>
+            <h2 className="text-base font-black text-slate-950">已保存证据</h2>
             <div className="mt-4 space-y-3">
-              {[
-                "工作记忆主要保存当前任务的短期上下文。",
-                "情节记忆可以通过摘要降低长对话 token 成本。",
-                "语义记忆更适合保存用户偏好和长期事实。",
-              ].map((item) => (
-                <div key={item} className="flex gap-3 text-sm leading-6 text-slate-600">
-                  <Quote className="mt-1 shrink-0 text-teal-700" size={15} aria-hidden="true" />
-                  <p>{item}</p>
-                </div>
-              ))}
+              {evidence.length ? (
+                evidence.map((item) => (
+                  <div key={item.id} className="flex gap-3 text-sm leading-6 text-slate-600">
+                    <Quote className="mt-1 shrink-0 text-teal-700" size={15} aria-hidden="true" />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-700">{item.claim}</p>
+                      {item.quote ? (
+                        <p className="mt-1 border-l-2 border-slate-200 pl-3 text-slate-500">
+                          {item.quote}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm leading-6 text-slate-500">
+                  暂无已保存证据。
+                </p>
+              )}
             </div>
           </Surface>
         </div>

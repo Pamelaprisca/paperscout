@@ -239,6 +239,39 @@ export function getPaperById(paperId) {
   return row ? rowToPaper(row) : null;
 }
 
+export function listEvidenceByPaperId(paperId) {
+  return db
+    .prepare(`
+      SELECT
+        id,
+        project_id AS projectId,
+        paper_id AS paperId,
+        claim,
+        quote,
+        created_at AS createdAt
+      FROM evidence
+      WHERE paper_id = ?
+      ORDER BY created_at DESC, id DESC
+    `)
+    .all(paperId);
+}
+
+export function getPaperChunkById(chunkId) {
+  const row = db
+    .prepare(`
+      SELECT
+        id AS chunkId,
+        paper_id AS paperId,
+        content,
+        chunk_order AS chunkOrder
+      FROM paper_chunks
+      WHERE id = ?
+    `)
+    .get(chunkId);
+
+  return row ?? null;
+}
+
 export function upsertPapers(papers) {
   db.exec("BEGIN");
 
